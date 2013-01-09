@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -114,7 +115,7 @@ func main() {
 		if statErr != nil {
 			log.Fatalln("Failed to stat file: " + statErr.Error())
 		}
-		fmt.Fprintln(w, "C0644", srcStat.Size(), sourceFile)
+		fmt.Fprintln(w, "C0644", srcStat.Size(), filepath.Base(sourceFile))
 		wp := &writeProgress{w, pb.StartNew(int(srcStat.Size())), time.Now()}
 
 		fmt.Printf("Transferring %s to %s@%s:%s\n", sourceFile, targetUser, targetHost, targetFile)
