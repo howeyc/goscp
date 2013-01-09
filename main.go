@@ -13,6 +13,7 @@ import (
 	"code.google.com/p/go.crypto/ssh"
 	"code.google.com/p/mxk/go1/flowcontrol"
 	"github.com/cheggaaa/pb"
+	"github.com/howeyc/gopass"
 )
 
 type cred struct {
@@ -20,7 +21,10 @@ type cred struct {
 }
 
 func (c *cred) Password(user string) (password string, err error) {
-	// TODO: use gopass for pass == ""
+	if c.pass == "" {
+		fmt.Printf("Password: ")
+		c.pass = string(gopass.GetPasswd())
+	}
 	if user == c.user {
 		return c.pass, nil
 	}
@@ -76,9 +80,6 @@ func main() {
 		*user = targetUser
 	}
 
-	fmt.Printf("Transferring %s to %s@%s:%s\n", sourceFile, targetUser, targetHost, targetFile)
-	fmt.Printf("Speed limited to %d bytes/sec\n", *limit)
-
 	clientCred := &cred{*user, *pw}
 	clientConfig := &ssh.ClientConfig{
 		User: *user,
@@ -115,6 +116,10 @@ func main() {
 		}
 		fmt.Fprintln(w, "C0644", srcStat.Size(), sourceFile)
 		wp := &writeProgress{w, pb.StartNew(int(srcStat.Size())), time.Now()}
+
+		fmt.Printf("Transferring %s to %s@%s:%s\n", sourceFile, targetUser, targetHost, targetFile)
+		fmt.Printf("Speed limited to %d bytes/sec\n", *limit)
+
 		io.Copy(wp, src)
 		fmt.Fprint(w, "\x00")
 		wp.Close()
