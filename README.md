@@ -1,8 +1,16 @@
 # goscp - scp client in Go
 
+Limitations
 * Only one source and one dest.
 * Only password authentication.
+
+Features
 * Ability to limit bandwidth.
+
+Why?
+* I had the requirement to send files over scp on low bandwidth infrastructure
+shared with critical equipment. I needed a way to make sure my transfers don't 
+wipe out everything else during file transfers
 
 Example
 ```sh
