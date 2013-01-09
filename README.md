@@ -1,8 +1,8 @@
 # goscp - scp client in Go
 
-Only one source and one dest.
-Only password authentication.
-Ability to limit bandwidth.
+* Only one source and one dest.
+* Only password authentication.
+* Ability to limit bandwidth.
 
 Example
 ```sh
