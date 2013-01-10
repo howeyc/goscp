@@ -1,7 +1,7 @@
 # goscp - scp client in Go
 
 Limitations
-* Only one source and one dest.
+* All source files must be local (aka. this is upload only)
 * Only password authentication.
 
 Features

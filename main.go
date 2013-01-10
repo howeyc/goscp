@@ -55,15 +55,14 @@ func main() {
 	limit := flag.Int64("limit", 1024, "bandwidth limit in bytes/sec")
 	flag.Parse()
 
-	if flag.NArg() != 2 {
-		fmt.Println("Must specify one source and one destination.")
+	if flag.NArg() < 2 {
+		fmt.Println("Must specify at least one source and a destination.")
 		flag.Usage()
 		os.Exit(1)
 	}
 
 	args := flag.Args()
-	sourceFile := args[0]
-	targetUser, targetHost, targetFile := parseFileHostLocation(args[1])
+	targetUser, targetHost, targetFile := parseFileHostLocation(args[len(args)-1])
 
 	if targetUser != "" && *user != "" && targetUser != *user {
 		fmt.Println("Specfied user@host and -l user that do not match.")
@@ -94,6 +93,12 @@ func main() {
 		log.Fatalln("Failed to dial: " + err.Error())
 	}
 
+	for _, sourceFile := range args[:len(args)-1] {
+		sendFileToRemoteHost(client, *limit, sourceFile, targetUser, targetHost, targetFile)
+	}
+}
+
+func sendFileToRemoteHost(client *ssh.ClientConn, limit int64, sourceFile, targetUser, targetHost, targetFile string) {
 	session, err := client.NewSession()
 	if err != nil {
 		log.Fatalln("Failed to create session: " + err.Error())
@@ -106,7 +111,7 @@ func main() {
 			log.Fatalln("Failed to create input pipe: " + err.Error())
 		}
 
-		w := flowcontrol.NewWriter(iw, *limit)
+		w := flowcontrol.NewWriter(iw, limit)
 		src, srcErr := os.Open(sourceFile)
 		if srcErr != nil {
 			log.Fatalln("Failed to open source file: " + srcErr.Error())
@@ -119,7 +124,7 @@ func main() {
 		wp := &writeProgress{w, pb.StartNew(int(srcStat.Size())), time.Now()}
 
 		fmt.Printf("Transferring %s to %s@%s:%s\n", sourceFile, targetUser, targetHost, targetFile)
-		fmt.Printf("Speed limited to %d bytes/sec\n", *limit)
+		fmt.Printf("Speed limited to %d bytes/sec\n", limit)
 
 		io.Copy(wp, src)
 		fmt.Fprint(w, "\x00")
