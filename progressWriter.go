@@ -5,7 +5,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/howeyc/pb"
+	"github.com/cheggaaa/pb"
 )
 
 type writeProgress struct {

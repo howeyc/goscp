@@ -13,8 +13,8 @@ import (
 
 	"code.google.com/p/go.crypto/ssh"
 	"code.google.com/p/mxk/go1/flowcontrol"
+	"github.com/cheggaaa/pb"
 	"github.com/howeyc/gopass"
-	"github.com/howeyc/pb"
 )
 
 type cred struct {
