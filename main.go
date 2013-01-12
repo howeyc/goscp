@@ -66,7 +66,7 @@ func main() {
 	args := flag.Args()
 	targetUser, targetHost, targetFile := parseFileHostLocation(args[len(args)-1])
 
-	var client *ssh.ClientConn
+	var targetClient *ssh.ClientConn
 	if targetHost != "" {
 		fmt.Println("Target Host: ", targetHost)
 		if targetUser != "" && *user != "" && targetUser != *user {
@@ -87,7 +87,7 @@ func main() {
 
 		clientCred := &cred{*user, targetHost, *pw}
 		var clientErr error
-		client, clientErr = connectToRemoteHost(ssh.ClientAuthPassword(clientCred), *user, targetHost, *port)
+		targetClient, clientErr = connectToRemoteHost(ssh.ClientAuthPassword(clientCred), *user, targetHost, *port)
 		if clientErr != nil {
 			log.Fatalln("Failed to dial: " + clientErr.Error())
 		}
@@ -102,13 +102,18 @@ func main() {
 			if err != nil {
 				log.Fatalln("Failed to dial: " + err.Error())
 			}
-			if targetInfo, statErr := os.Stat(targetFile); statErr == nil && targetInfo.IsDir() == true {
-				getFileFromRemoteHost(client, filepath.Join(targetFile, srcFile), srcUser, srcHost, srcFile)
+			if targetHost == "" {
+				if targetInfo, statErr := os.Stat(targetFile); statErr == nil && targetInfo.IsDir() == true {
+					getFileFromRemoteHost(client, filepath.Join(targetFile, srcFile), srcUser, srcHost, srcFile)
+				} else {
+					getFileFromRemoteHost(client, targetFile, srcUser, srcHost, srcFile)
+				}
 			} else {
-				getFileFromRemoteHost(client, targetFile, srcUser, srcHost, srcFile)
+				fmt.Println("Both source and destination cannot be remote, one side must be local.")
+				os.Exit(1)
 			}
 		} else {
-			sendFileToRemoteHost(client, *limit, sourceFile, targetUser, targetHost, targetFile)
+			sendFileToRemoteHost(targetClient, *limit, sourceFile, targetUser, targetHost, targetFile)
 		}
 	}
 }
