@@ -54,7 +54,8 @@ func main() {
 	user := flag.String("l", "", "connect with specified username")
 	pw := flag.String("pw", "", "login with specified password")
 	port := flag.Int64("P", 22, "connect with specified port")
-	limit := flag.Int64("limit", 1024, "bandwidth limit in bytes/sec")
+	limit := flag.Int64("limit", 10240, "bandwidth limit in bytes/sec")
+	verbose := flag.Bool("v", false, "show verbose messages")
 	flag.Parse()
 
 	if flag.NArg() < 2 {
@@ -115,6 +116,10 @@ func main() {
 		} else {
 			sendFileToRemoteHost(targetClient, *limit, sourceFile, targetUser, targetHost, targetFile)
 		}
+	}
+	//PSCP has -v flag, so we need to use it as well
+	if *verbose == true {
+		fmt.Println("Program completed.")
 	}
 }
 
