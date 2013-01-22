@@ -154,15 +154,22 @@ func sendFileToRemoteHost(client *ssh.ClientConn, limit int64, sourceFile, targe
 		if statErr != nil {
 			log.Fatalln("Failed to stat file: " + statErr.Error())
 		}
+
 		fmt.Fprintln(w, "C0644", srcStat.Size(), filepath.Base(sourceFile))
-		wp := &writeProgress{w, pb.StartNew(int(srcStat.Size())), time.Now()}
+		if srcStat.Size() > 0 {
+			wp := &writeProgress{w, pb.StartNew(int(srcStat.Size())), time.Now()}
 
-		fmt.Printf("Transferring %s to %s@%s:%s\n", sourceFile, targetUser, targetHost, targetFile)
-		fmt.Printf("Speed limited to %d bytes/sec\n", limit)
+			fmt.Printf("Transferring %s to %s@%s:%s\n", sourceFile, targetUser, targetHost, targetFile)
+			fmt.Printf("Speed limited to %d bytes/sec\n", limit)
 
-		io.Copy(wp, src)
-		fmt.Fprint(w, "\x00")
-		wp.Close()
+			io.Copy(wp, src)
+			fmt.Fprint(w, "\x00")
+			wp.Close()
+		} else {
+			fmt.Printf("Transferred empty file %s to %s@%s:%s\n", sourceFile, targetUser, targetHost, targetFile)
+			fmt.Fprint(w, "\x00")
+			w.Close()
+		}
 	}()
 	if err := session.Run(fmt.Sprintf("scp -t %s", targetFile)); err != nil {
 		log.Fatalln("Failed to run: " + err.Error())
