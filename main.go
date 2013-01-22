@@ -69,7 +69,6 @@ func main() {
 
 	var targetClient *ssh.ClientConn
 	if targetHost != "" {
-		fmt.Println("Target Host: ", targetHost)
 		if targetUser != "" && *user != "" && targetUser != *user {
 			fmt.Println("Specfied user@host and -l user that do not match.")
 			flag.Usage()
