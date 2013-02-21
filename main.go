@@ -56,9 +56,10 @@ func main() {
 	port := flag.Int64("P", 22, "connect with specified port")
 	limit := flag.Int64("limit", 10240, "bandwidth limit in bytes/sec")
 	verbose := flag.Bool("v", false, "show verbose messages")
+	fileListing := flag.Bool("ls", false, "folder listing")
 	flag.Parse()
 
-	if flag.NArg() < 2 {
+	if flag.NArg() < 2 && !*fileListing {
 		fmt.Println("Must specify at least one source and a destination.")
 		flag.Usage()
 		os.Exit(1)
@@ -91,7 +92,12 @@ func main() {
 		if clientErr != nil {
 			log.Fatalln("Failed to dial: " + clientErr.Error())
 		}
+	}
 
+	// Handle -ls flag
+	if *fileListing {
+		displayListing(targetClient, targetFile)
+		os.Exit(0)
 	}
 
 	for _, sourceFile := range args[:len(args)-1] {
@@ -129,6 +135,26 @@ func connectToRemoteHost(auth ssh.ClientAuth, user, host string, port int64) (*s
 	}
 
 	return ssh.Dial("tcp", fmt.Sprintf("%s:%d", host, port), clientConfig)
+}
+
+func displayListing(client *ssh.ClientConn, targetFile string) {
+	session, err := client.NewSession()
+	if err != nil {
+		log.Fatalln("Failed to create session: " + err.Error())
+	}
+	defer session.Close()
+
+	go func() {
+		or, err := session.StdoutPipe()
+		if err != nil {
+			log.Fatalln("Failed to create output pipe: " + err.Error())
+		}
+		io.Copy(os.Stdout, or)
+	}()
+
+	if err := session.Run(fmt.Sprintf("ls -al %s", targetFile)); err != nil {
+		log.Fatalln("Failed to run: " + err.Error())
+	}
 }
 
 func sendFileToRemoteHost(client *ssh.ClientConn, limit int64, sourceFile, targetUser, targetHost, targetFile string) {
