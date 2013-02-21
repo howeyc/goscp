@@ -215,7 +215,7 @@ func getFileFromRemoteHost(client *ssh.ClientConn, localFile, targetUser, target
 		}
 		or, err := session.StdoutPipe()
 		if err != nil {
-			log.Fatalln("Failed to create input pipe: " + err.Error())
+			log.Fatalln("Failed to create output pipe: " + err.Error())
 		}
 		fmt.Fprint(iw, "\x00")
 
