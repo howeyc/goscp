@@ -227,17 +227,16 @@ func getFileFromRemoteHost(client *ssh.ClientConn, localFile, targetUser, target
 		}
 		if controlString, ok := sr.ReadString('\n'); ok == nil && strings.HasPrefix(controlString, "C") {
 			fmt.Fprint(iw, "\x00")
-			fmt.Println(controlString)
 			controlParts := strings.Split(controlString, " ")
 			size, _ := strconv.ParseInt(controlParts[1], 10, 64)
-			buf := make([]byte, size)
-			if n, ok := io.ReadFull(sr, buf); ok != nil || n < len(buf) {
+			rp := &readProgress{sr, pb.StartNew(int(size)), time.Now()}
+			defer rp.Close()
+			if n, ok := io.CopyN(src, rp, size); ok != nil || n < size {
 				fmt.Println(n)
 				fmt.Fprint(iw, "\x02")
 				return
 			}
-			src.Write(buf)
-			sr.Read(buf[:1])
+			sr.Read(make([]byte, 1))
 		}
 		fmt.Fprint(iw, "\x00")
 	}()
