@@ -3,6 +3,7 @@
 Limitations
 * Only password authentication.
 * Only upload and download of files, no handling of directories
+* No checking of destination key!
 
 Features
 * Ability to limit bandwidth (Only when destination is remote).
