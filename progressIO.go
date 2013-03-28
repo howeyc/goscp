@@ -16,8 +16,7 @@ type writeProgress struct {
 
 func (wp *writeProgress) Write(p []byte) (n int, err error) {
 	n, err = wp.embed.Write(p)
-	wp.progress.Add(len(p))
-
+	wp.progress.Add(n)
 	return
 }
 
@@ -35,8 +34,7 @@ type readProgress struct {
 
 func (rp *readProgress) Read(p []byte) (n int, err error) {
 	n, err = rp.embed.Read(p)
-	rp.progress.Add(len(p))
-
+	rp.progress.Add(n)
 	return
 }
 
