@@ -15,8 +15,8 @@ import (
 
 	"code.google.com/p/go.crypto/ssh"
 	"code.google.com/p/mxk/go1/flowcontrol"
-	"github.com/cheggaaa/pb"
 	"github.com/howeyc/gopass"
+	"github.com/howeyc/pb"
 )
 
 type cred struct {
@@ -54,7 +54,7 @@ func main() {
 	user := flag.String("l", "", "connect with specified username")
 	pw := flag.String("pw", "", "login with specified password")
 	port := flag.Int64("P", 22, "connect with specified port")
-	limit := flag.Int64("limit", 10240, "bandwidth limit in bytes/sec")
+	limit := flag.Int64("limit", 0, "bandwidth limit in bytes/sec")
 	verbose := flag.Bool("v", false, "show verbose messages")
 	fileListing := flag.Bool("ls", false, "folder listing")
 	flag.Parse()
@@ -182,7 +182,10 @@ func sendFileToRemoteHost(client *ssh.ClientConn, limit int64, sourceFile, targe
 
 		fmt.Fprintln(w, "C0644", srcStat.Size(), filepath.Base(sourceFile))
 		if srcStat.Size() > 0 {
-			wp := &writeProgress{w, pb.StartNew(int(srcStat.Size())), time.Now()}
+			bar := pb.New(int(srcStat.Size()))
+			bar.Units = "b"
+			bar.ShowSpeed = true
+			wp := &writeProgress{w, bar, time.Now()}
 
 			fmt.Printf("Transferring %s to %s@%s:%s\n", sourceFile, targetUser, targetHost, targetFile)
 			fmt.Printf("Speed limited to %d bytes/sec\n", limit)
@@ -229,7 +232,10 @@ func getFileFromRemoteHost(client *ssh.ClientConn, localFile, targetUser, target
 			fmt.Fprint(iw, "\x00")
 			controlParts := strings.Split(controlString, " ")
 			size, _ := strconv.ParseInt(controlParts[1], 10, 64)
-			rp := &readProgress{sr, pb.StartNew(int(size)), time.Now()}
+			bar := pb.New(int(size))
+			bar.Units = "b"
+			bar.ShowSpeed = true
+			rp := &readProgress{sr, bar, time.Now()}
 			defer rp.Close()
 			if n, ok := io.CopyN(src, rp, size); ok != nil || n < size {
 				fmt.Println(n)
