@@ -185,6 +185,7 @@ func sendFileToRemoteHost(client *ssh.ClientConn, limit int64, sourceFile, targe
 			bar := pb.New(int(srcStat.Size()))
 			bar.Units = "b"
 			bar.ShowSpeed = true
+			bar.Start()
 			wp := &writeProgress{w, bar, time.Now()}
 
 			fmt.Printf("Transferring %s to %s@%s:%s\n", sourceFile, targetUser, targetHost, targetFile)
@@ -235,6 +236,7 @@ func getFileFromRemoteHost(client *ssh.ClientConn, localFile, targetUser, target
 			bar := pb.New(int(size))
 			bar.Units = "b"
 			bar.ShowSpeed = true
+			bar.Start()
 			rp := &readProgress{sr, bar, time.Now()}
 			defer rp.Close()
 			if n, ok := io.CopyN(src, rp, size); ok != nil || n < size {
