@@ -11,12 +11,11 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 
 	"code.google.com/p/go.crypto/ssh"
 	"code.google.com/p/mxk/go1/flowcontrol"
+	"github.com/cheggaaa/pb"
 	"github.com/howeyc/gopass"
-	"github.com/howeyc/pb"
 )
 
 type cred struct {
@@ -183,17 +182,18 @@ func sendFileToRemoteHost(client *ssh.ClientConn, limit int64, sourceFile, targe
 		fmt.Fprintln(w, "C0644", srcStat.Size(), filepath.Base(sourceFile))
 		if srcStat.Size() > 0 {
 			bar := pb.New(int(srcStat.Size()))
-			bar.Units = "b"
+			bar.Units = pb.U_BYTES
 			bar.ShowSpeed = true
 			bar.Start()
-			wp := &writeProgress{w, bar, time.Now()}
+			wp := io.MultiWriter(w, bar)
 
 			fmt.Printf("Transferring %s to %s@%s:%s\n", sourceFile, targetUser, targetHost, targetFile)
 			fmt.Printf("Speed limited to %d bytes/sec\n", limit)
 
 			io.Copy(wp, src)
+			bar.Finish()
 			fmt.Fprint(w, "\x00")
-			wp.Close()
+			w.Close()
 		} else {
 			fmt.Printf("Transferred empty file %s to %s@%s:%s\n", sourceFile, targetUser, targetHost, targetFile)
 			fmt.Fprint(w, "\x00")
@@ -234,16 +234,16 @@ func getFileFromRemoteHost(client *ssh.ClientConn, localFile, targetUser, target
 			controlParts := strings.Split(controlString, " ")
 			size, _ := strconv.ParseInt(controlParts[1], 10, 64)
 			bar := pb.New(int(size))
-			bar.Units = "b"
+			bar.Units = pb.U_BYTES
 			bar.ShowSpeed = true
 			bar.Start()
-			rp := &readProgress{sr, bar, time.Now()}
-			defer rp.Close()
+			rp := io.MultiReader(sr, bar)
 			if n, ok := io.CopyN(src, rp, size); ok != nil || n < size {
 				fmt.Println(n)
 				fmt.Fprint(iw, "\x02")
 				return
 			}
+			bar.Finish()
 			sr.Read(make([]byte, 1))
 		}
 		fmt.Fprint(iw, "\x00")
