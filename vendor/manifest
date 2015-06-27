@@ -1,0 +1,40 @@
+{
+	"version": 0,
+	"dependencies": [
+		{
+			"importpath": "github.com/cheggaaa/pb",
+			"repository": "https://github.com/cheggaaa/pb",
+			"revision": "e648e12b78cedf14ebb2fc1855033f07b034cfbb",
+			"branch": "master",
+			"path": ""
+		},
+		{
+			"importpath": "github.com/olekukonko/ts",
+			"repository": "https://github.com/olekukonko/ts",
+			"revision": "ecf753e7c962639ab5a1fb46f7da627d4c0a04b8",
+			"branch": "master",
+			"path": ""
+		},
+		{
+			"importpath": "github.com/howeyc/gopass",
+			"repository": "https://github.com/howeyc/gopass",
+			"revision": "2c70fa70727c953c51695f800f25d6b44abb368e",
+			"branch": "master",
+			"path": ""
+		},
+		{
+			"importpath": "github.com/mxk/go-flowrate",
+			"repository": "https://github.com/mxk/go-flowrate",
+			"revision": "cca7078d478f8520f85629ad7c68962d31ed7682",
+			"branch": "master",
+			"path": ""
+		},
+		{
+			"importpath": "golang.org/x/crypto",
+			"repository": "https://go.googlesource.com/crypto",
+			"revision": "60052bd85f2d91293457e8811b0cf26b773de469",
+			"branch": "master",
+			"path": ""
+		}
+	]
+}

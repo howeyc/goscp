@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -12,26 +11,11 @@ import (
 	"strconv"
 	"strings"
 
-	"code.google.com/p/go.crypto/ssh"
-	"code.google.com/p/mxk/go1/flowcontrol"
 	"github.com/cheggaaa/pb"
 	"github.com/howeyc/gopass"
+	"github.com/mxk/go-flowrate/flowrate"
+	"golang.org/x/crypto/ssh"
 )
-
-type cred struct {
-	user, host, pass string
-}
-
-func (c *cred) Password(user string) (password string, err error) {
-	if user == c.user && c.pass == "" {
-		fmt.Printf("Password for %s@%s: ", c.user, c.host)
-		c.pass = string(gopass.GetPasswd())
-		return c.pass, nil
-	} else if user == c.user {
-		return c.pass, nil
-	}
-	return "", errors.New("Invalid User.")
-}
 
 func parseFileHostLocation(loc string) (user, host, path string) {
 	path = loc
@@ -67,7 +51,16 @@ func main() {
 	args := flag.Args()
 	targetUser, targetHost, targetFile := parseFileHostLocation(args[len(args)-1])
 
-	var targetClient *ssh.ClientConn
+	password := func() (secret string, err error) {
+		if *pw != "" {
+			return *pw, nil
+		}
+		fmt.Print("Password: ")
+		pass := string(gopass.GetPasswd())
+		return pass, nil
+	}
+
+	var targetClient *ssh.Client
 	if targetHost != "" {
 		if targetUser != "" && *user != "" && targetUser != *user {
 			fmt.Println("Specfied user@host and -l user that do not match.")
@@ -85,9 +78,8 @@ func main() {
 			*user = targetUser
 		}
 
-		clientCred := &cred{*user, targetHost, *pw}
 		var clientErr error
-		targetClient, clientErr = connectToRemoteHost(ssh.ClientAuthPassword(clientCred), *user, targetHost, *port)
+		targetClient, clientErr = connectToRemoteHost(ssh.PasswordCallback(password), *user, targetHost, *port)
 		if clientErr != nil {
 			log.Fatalln("Failed to dial: " + clientErr.Error())
 		}
@@ -102,8 +94,7 @@ func main() {
 	for _, sourceFile := range args[:len(args)-1] {
 		srcUser, srcHost, srcFile := parseFileHostLocation(sourceFile)
 		if srcUser != "" && srcHost != "" {
-			clientCred := &cred{srcUser, srcHost, ""}
-			client, err := connectToRemoteHost(ssh.ClientAuthPassword(clientCred), srcUser, srcHost, 22)
+			client, err := connectToRemoteHost(ssh.PasswordCallback(password), srcUser, srcHost, 22)
 			if err != nil {
 				log.Fatalln("Failed to dial: " + err.Error())
 			}
@@ -127,16 +118,34 @@ func main() {
 	}
 }
 
-func connectToRemoteHost(auth ssh.ClientAuth, user, host string, port int64) (*ssh.ClientConn, error) {
+// Support keyboard interactive challenge
+func kic(user, instruction string, questions []string, echos []bool) (answers []string, err error) {
+	if user != "" || instruction != "" {
+		fmt.Println(user, instruction)
+	}
+	for idx, question := range questions {
+		fmt.Print(question)
+		if !echos[idx] {
+			answers = append(answers, string(gopass.GetPasswd()))
+		} else {
+			bufin := bufio.NewReader(os.Stdin)
+			line, _ := bufin.ReadString('\n')
+			answers = append(answers, line)
+		}
+	}
+	return answers, nil
+}
+
+func connectToRemoteHost(auth ssh.AuthMethod, user, host string, port int64) (*ssh.Client, error) {
 	clientConfig := &ssh.ClientConfig{
 		User: user,
-		Auth: []ssh.ClientAuth{auth},
+		Auth: []ssh.AuthMethod{auth, ssh.KeyboardInteractive(kic)},
 	}
 
 	return ssh.Dial("tcp", fmt.Sprintf("%s:%d", host, port), clientConfig)
 }
 
-func displayListing(client *ssh.ClientConn, targetFile string) {
+func displayListing(client *ssh.Client, targetFile string) {
 	session, err := client.NewSession()
 	if err != nil {
 		log.Fatalln("Failed to create session: " + err.Error())
@@ -156,7 +165,7 @@ func displayListing(client *ssh.ClientConn, targetFile string) {
 	}
 }
 
-func sendFileToRemoteHost(client *ssh.ClientConn, limit int64, sourceFile, targetUser, targetHost, targetFile string) {
+func sendFileToRemoteHost(client *ssh.Client, limit int64, sourceFile, targetUser, targetHost, targetFile string) {
 	session, err := client.NewSession()
 	if err != nil {
 		log.Fatalln("Failed to create session: " + err.Error())
@@ -169,7 +178,7 @@ func sendFileToRemoteHost(client *ssh.ClientConn, limit int64, sourceFile, targe
 			log.Fatalln("Failed to create input pipe: " + err.Error())
 		}
 
-		w := flowcontrol.NewWriter(iw, limit)
+		w := flowrate.NewWriter(iw, limit)
 		src, srcErr := os.Open(sourceFile)
 		if srcErr != nil {
 			log.Fatalln("Failed to open source file: " + srcErr.Error())
@@ -205,7 +214,7 @@ func sendFileToRemoteHost(client *ssh.ClientConn, limit int64, sourceFile, targe
 	}
 }
 
-func getFileFromRemoteHost(client *ssh.ClientConn, localFile, targetUser, targetHost, targetFile string) {
+func getFileFromRemoteHost(client *ssh.Client, localFile, targetUser, targetHost, targetFile string) {
 	session, err := client.NewSession()
 	if err != nil {
 		log.Fatalln("Failed to create session: " + err.Error())
